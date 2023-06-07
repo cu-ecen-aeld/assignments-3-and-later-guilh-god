@@ -10,7 +10,10 @@ default: $(INPUT)
 	$(GCC) $(CFLAGS) $(INPUT) -o $(OUTPUT)
 
 clean:
-	if [ ! -e $(OUTPUT) ]; then
+	if [ ! -e $(OUTPUT) ]; \
+	then \
+		echo "Nothing to be done"; \
 	else \
+		echo "Cleaning objects"; \
 		rm $(OUTPUT); \
 	fi

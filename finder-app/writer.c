@@ -26,6 +26,7 @@ if (file==NULL) {
 	}
 }
 else {
+	fprintf(file,"%s",argv[2]);
 	syslog(LOG_DEBUG,"Writing %s to %s",argv[2],argv[1]);
 	fclose(file);
 	closelog();
