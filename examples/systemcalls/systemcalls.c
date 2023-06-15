@@ -1,4 +1,11 @@
 #include "systemcalls.h"
+#include <syslog.h>
+#include "stdlib.h"
+#include "unistd.h"
+#include <errno.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <fcntl.h>
 
 /**
  * @param cmd the command to execute with system()
@@ -9,7 +16,6 @@
 */
 bool do_system(const char *cmd)
 {
-
 /*
  * TODO  add your code here
  *  Call the system() function with the command set in the cmd
@@ -17,7 +23,16 @@ bool do_system(const char *cmd)
  *   or false() if it returned a failure
 */
 
-    return true;
+int ret = system(cmd);
+if (ret >= 0){
+    if (ret != 127){
+        ret = true;
+    }
+}else{
+    ret = false;
+}
+
+    return ret;
 }
 
 /**
@@ -59,6 +74,32 @@ bool do_exec(int count, ...)
  *
 */
 
+    __pid_t pid = fork();
+
+    if (pid == -1){
+        return false;
+    }
+
+    if (pid == 0){
+        int ret = execv(command[0], command);
+        if (ret == -1){
+            exit(errno);
+        }
+    }
+
+    if (pid > 0){
+        int status = 0;
+        pid_t wpid = waitpid(pid, &status, 0);
+        if (wpid == -1){
+            return false;
+        }
+
+        if (WIFEXITED(status) == true && WEXITSTATUS(status) == 0) {
+            return true;
+        }
+        return false;
+        }
+
     va_end(args);
 
     return true;
@@ -71,6 +112,9 @@ bool do_exec(int count, ...)
 */
 bool do_exec_redirect(const char *outputfile, int count, ...)
 {
+    pid_t childPid;
+    int childStatus;
+    int fd;
     va_list args;
     va_start(args, count);
     char * command[count+1];
@@ -92,6 +136,32 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
  *   The rest of the behaviour is same as do_exec()
  *
 */
+
+    fd = open(outputfile, O_WRONLY|O_TRUNC|O_CREAT, 0644);
+    childPid = fork();
+    if (childPid == -1){
+        close(fd);
+        return false;
+    }else if (childPid == 0) {
+        dup2(fd, 1);
+        close(fd);
+        execvp(command[0], command);
+        exit(-1);
+    }
+    
+    if (waitpid (childPid, &childStatus, 0) == -1)
+    {
+        close(fd);
+        return false;
+    }
+    else if (WIFEXITED (childStatus))
+    {
+	return !WEXITSTATUS(childStatus);
+    }
+    else
+    {
+    	return false;
+    }
 
     va_end(args);
 
